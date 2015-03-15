@@ -112,10 +112,10 @@ void AP_MotorsVtol::output_armed()
         limit.throttle_upper = true;
     }
 
-    // Vtolcopters limit throttle to 80%
+    // Vtolcopters limit throttle to 90%
     // To-Do: implement improved stability patch and remove this limit
-    if (_rc_throttle.servo_out > 800) {
-        _rc_throttle.servo_out = 800;
+    if (_rc_throttle.servo_out > 900) {
+        _rc_throttle.servo_out = 900;
         limit.throttle_upper = true;
     }
 

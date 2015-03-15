@@ -37,6 +37,22 @@ static bool set_mode(uint8_t mode)
             #endif
             break;
 
+        case FREE_FORWARD_FLIGHT:
+            #if FRAME_CONFIG == VTOL_FRAME
+                success = freeforwardflight_init(ignore_checks);
+            #else
+                success = stabilize_init(ignore_checks);
+            #endif
+            break;
+
+        case STABILIZED_FORWARD_FLIGHT:
+            #if FRAME_CONFIG == VTOL_FRAME
+                success = stabilizedforwardflight_init(ignore_checks);
+            #else
+                success = stabilize_init(ignore_checks);
+            #endif
+            break;
+
         case ALT_HOLD:
             success = althold_init(ignore_checks);
             break;
@@ -141,6 +157,22 @@ static void update_flight_mode()
         case STABILIZE:
             #if FRAME_CONFIG == HELI_FRAME
                 heli_stabilize_run();
+            #else
+                stabilize_run();
+            #endif
+            break;
+
+        case FREE_FORWARD_FLIGHT:
+            #if FRAME_CONFIG == VTOL_FRAME
+                freeforwardflight_run();
+            #else
+                stabilize_run();
+            #endif
+            break;
+
+        case STABILIZED_FORWARD_FLIGHT:
+            #if FRAME_CONFIG == VTOL_FRAME
+                stabilizedforwardflight_run();
             #else
                 stabilize_run();
             #endif
@@ -303,6 +335,12 @@ print_flight_mode(AP_HAL::BetterStream *port, uint8_t mode)
         break;
     case ACRO:
         port->print_P(PSTR("ACRO"));
+        break;
+    case FREE_FORWARD_FLIGHT:
+        port->print_P(PSTR("FREE_FORWARD_FLIGHT"));
+        break;
+    case STABILIZED_FORWARD_FLIGHT:
+        port->print_P(PSTR("STABILIZED_FORWARD_FLIGHT"));
         break;
     case ALT_HOLD:
         port->print_P(PSTR("ALT_HOLD"));

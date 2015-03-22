@@ -11,17 +11,27 @@
 #include <RC_Channel.h>     // RC Channel Library
 #include "AP_Motors.h"
 
-// tail servo uses channel 9
-#define AP_MOTORS_CH_VTOL_YAW    CH_9
+// tail servo uses channel 7
+#define AP_MOTORS_CH_VTOL_YAW    CH_7
+
+#define AP_MOTORS_CH_VTOL_HORIZONTAL_ROLL    CH_5
+#define AP_MOTORS_CH_VTOL_HORIZONTAL_PITCH   CH_6
+
+
+#define AP_MOTORS_VERTICAL   0
+#define AP_MOTORS_HORIZONTAL   1
+
+
+#define AP_MOTORS_TRANSITION_MAX_LOOP_COUNTER   3000
 
 /// @class      AP_MotorsVtol
 class AP_MotorsVtol : public AP_Motors {
 public:
 
     /// Constructor
-    AP_MotorsVtol(RC_Channel& rc_roll, RC_Channel& rc_pitch, RC_Channel& rc_throttle, RC_Channel& rc_yaw, RC_Channel& rc_tail, uint16_t loop_rate, uint16_t speed_hz = AP_MOTORS_SPEED_DEFAULT) :
+    AP_MotorsVtol(RC_Channel& rc_roll, RC_Channel& rc_pitch, RC_Channel& rc_throttle, RC_Channel& rc_yaw, RC_Channel& rc_tail, RC_Channel& rc_horizontal_roll, RC_Channel& rc_horizontal_pitch, uint16_t loop_rate, uint16_t speed_hz = AP_MOTORS_SPEED_DEFAULT) :
         AP_Motors(rc_roll, rc_pitch, rc_throttle, rc_yaw, loop_rate, speed_hz),
-        _rc_tail(rc_tail) {
+        _rc_tail(rc_tail), _rc_horizontal_roll(rc_horizontal_roll), _rc_horizontal_pitch(rc_horizontal_pitch) {
     };
 
     // init
@@ -45,12 +55,21 @@ public:
     //  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
     virtual uint16_t    get_motor_mask();
 
+    virtual void        set_flight_mode(uint8_t mode);
+
 protected:
     // output - sends commands to the motors
     virtual void        output_armed();
     virtual void        output_disarmed();
 
+    uint8_t _flight_mode = AP_MOTORS_VERTICAL;
+
+    uint16_t _transition_counter = 0;
+    uint16_t _transition_max = AP_MOTORS_TRANSITION_MAX_LOOP_COUNTER;
+
     RC_Channel&         _rc_tail;       // REV parameter used from this channel to determine direction of tail servo movement
+    RC_Channel&         _rc_horizontal_roll;
+    RC_Channel&         _rc_horizontal_pitch;
 };
 
 #endif  // AP_MOTORSVtol

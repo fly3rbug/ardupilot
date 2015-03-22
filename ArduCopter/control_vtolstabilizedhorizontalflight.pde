@@ -12,11 +12,15 @@ static bool vtolstabilizedhorizontalflight_init(bool ignore_checks)
     pos_control.set_alt_target(0);
     attitude_control.enable_yaw_rate_control(false);
 
+    motors.set_flight_mode(AP_MOTORS_HORIZONTAL);
+
     // stabilize should never be made to fail
     return true;
 }
 static void vtolstabilizedhorizontalflight_cleanup()
 {
+    motors.set_flight_mode(AP_MOTORS_VERTICAL);
+
     attitude_control.enable_yaw_rate_control(true);
 }
 
@@ -26,14 +30,6 @@ static void vtolstabilizedhorizontalflight_run()
 {
     float target_roll, target_pitch, target_yaw;
     int16_t pilot_throttle_scaled;
-
-    // if motors not running reset angle targets
-    if(!motors.armed() || g.rc_3.control_in <= 0) {
-        attitude_control.relax_bf_rate_controller();
-        attitude_control.set_yaw_target_to_current_heading();
-        attitude_control.set_throttle_out(0, false);
-        return;
-    }
 
     // convert the input to the desired body frame rate
     get_pilot_desired_angle_rates(g.rc_1.control_in, g.rc_2.control_in, g.rc_4.control_in, target_roll, target_pitch, target_yaw);

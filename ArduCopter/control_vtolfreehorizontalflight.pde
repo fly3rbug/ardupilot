@@ -7,13 +7,18 @@
 // vtolfreehorizontalflight_init - initialise flight mode
 static bool vtolfreehorizontalflight_init(bool ignore_checks)
 {
+    motors.set_flight_mode(AP_MOTORS_HORIZONTAL);
+
     attitude_control.enable_pitch_rate_control(false);
     attitude_control.enable_roll_rate_control(false);
     attitude_control.enable_yaw_rate_control(false);
     return true;
 }
+
 static void vtolfreehorizontalflight_cleanup()
 {
+    motors.set_flight_mode(AP_MOTORS_VERTICAL);
+
     attitude_control.enable_pitch_rate_control(true);
     attitude_control.enable_roll_rate_control(true);
     attitude_control.enable_yaw_rate_control(true);
@@ -23,11 +28,6 @@ static void vtolfreehorizontalflight_cleanup()
 // will be called at 100hz or more
 static void vtolfreehorizontalflight_run()
 {
-    // if not armed or throttle at zero, set throttle to zero and exit immediately
-    if(!motors.armed() || g.rc_3.control_in <= 0) {
-        motors.set_throttle(0);
-        return;
-    }
 
     motors.set_roll(g.rc_1.control_in);
     motors.set_pitch(g.rc_2.control_in);

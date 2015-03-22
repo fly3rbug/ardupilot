@@ -72,7 +72,7 @@ static void arm_motors_check()
 static void auto_disarm_check()
 {
     // exit immediately if we are already disarmed or throttle is not zero
-    if (!motors.armed() || !ap.throttle_zero) {
+    if (!motors.armed() || !ap.throttle_zero || control_mode == VTOL_STABILIZED_HORIZONTAL_FLIGHT || control_mode == VTOL_FREE_HORIZONTAL_FLIGHT) {
         auto_disarming_counter = 0;
         return;
     }

@@ -42,6 +42,9 @@ void AP_MotorsVtol::Init()
 
     // disable CH7 from being used as an aux output (i.e. for camera gimbal, etc)
     RC_Channel_aux::disable_aux_channel(AP_MOTORS_CH_VTOL_YAW);
+
+    RC_Channel_aux::disable_aux_channel(AP_MOTORS_CH_VTOL_HORIZONTAL_PITCH);
+    RC_Channel_aux::disable_aux_channel(AP_MOTORS_CH_VTOL_HORIZONTAL_ROLL);
 }
 
 // set update rate to motors - a value in hertz
@@ -68,6 +71,8 @@ void AP_MotorsVtol::enable()
     hal.rcout->enable_ch(pgm_read_byte(&_motor_to_channel_map[AP_MOTORS_MOT_3]));
     hal.rcout->enable_ch(pgm_read_byte(&_motor_to_channel_map[AP_MOTORS_MOT_4]));
     hal.rcout->enable_ch(AP_MOTORS_CH_VTOL_YAW);
+    hal.rcout->enable_ch(AP_MOTORS_CH_VTOL_HORIZONTAL_PITCH);
+    hal.rcout->enable_ch(AP_MOTORS_CH_VTOL_HORIZONTAL_ROLL);
 }
 
 // output_min - sends minimum values out to the motors
@@ -82,14 +87,21 @@ void AP_MotorsVtol::output_min()
     hal.rcout->write(pgm_read_byte(&_motor_to_channel_map[AP_MOTORS_MOT_3]), _rc_throttle.radio_min);
     hal.rcout->write(pgm_read_byte(&_motor_to_channel_map[AP_MOTORS_MOT_4]), _rc_throttle.radio_min);
     hal.rcout->write(pgm_read_byte(&_motor_to_channel_map[AP_MOTORS_CH_VTOL_YAW]), _rc_yaw.radio_trim);
+    hal.rcout->write(pgm_read_byte(&_motor_to_channel_map[AP_MOTORS_CH_VTOL_HORIZONTAL_PITCH]), _rc_pitch.radio_trim);
+    hal.rcout->write(pgm_read_byte(&_motor_to_channel_map[AP_MOTORS_CH_VTOL_HORIZONTAL_ROLL]), _rc_roll.radio_trim);
 }
 
 // get_motor_mask - returns a bitmask of which outputs are being used for motors or servos (1 means being used)
 //  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
 uint16_t AP_MotorsVtol::get_motor_mask()
 {
-    // Vtol copter uses channels 1,2,3,4 and 7
-    return (1U << 0 | 1U << 1 | 1U << 2 | 1U << 3 | 1U << AP_MOTORS_CH_VTOL_YAW);
+    // Vtol copter uses channels 1,2,3,4 and the others
+    return (1U << 0 | 1U << 1 | 1U << 2 | 1U << 3 | 1U << AP_MOTORS_CH_VTOL_YAW | 1U << AP_MOTORS_CH_VTOL_HORIZONTAL_PITCH | 1U << AP_MOTORS_CH_VTOL_HORIZONTAL_ROLL);
+}
+
+void AP_MotorsVtol::set_flight_mode(uint8_t mode)
+{
+    _flight_mode = mode;
 }
 
 // output_armed - sends commands to the motors
@@ -97,7 +109,17 @@ void AP_MotorsVtol::output_armed()
 {
     int16_t out_min = _rc_throttle.radio_min + _min_throttle;
     int16_t out_max = _rc_throttle.radio_max;
-    int16_t motor_out[AP_MOTORS_MOT_4+1];
+    int8_t number_of_motors = AP_MOTORS_MOT_4+1;
+
+    int16_t motor_out[number_of_motors];
+
+    //initialize motor_out
+    for (uint8_t i = 0; i < number_of_motors; ++i)
+    {
+        motor_out[i] = 0;
+    }
+
+    float transition_factor = (float)_transition_counter / _transition_max;
 
     // initialize lower limit flag
     limit.throttle_lower = false;
@@ -114,9 +136,11 @@ void AP_MotorsVtol::output_armed()
 
     // Vtolcopters limit throttle to 90%
     // To-Do: implement improved stability patch and remove this limit
-    if (_rc_throttle.servo_out > 900) {
-        _rc_throttle.servo_out = 900;
-        limit.throttle_upper = true;
+    if (_flight_mode == AP_MOTORS_VERTICAL) {
+        if (_rc_throttle.servo_out > 900) {
+            _rc_throttle.servo_out = 900;
+            limit.throttle_upper = true;
+        }
     }
 
     // capture desired roll, pitch, yaw and throttle from receiver
@@ -125,34 +149,36 @@ void AP_MotorsVtol::output_armed()
     _rc_throttle.calc_pwm();
     _rc_yaw.calc_pwm();
 
-    // if we are not sending a throttle output, we cut the motors
-    if(_rc_throttle.servo_out == 0) {
-        // range check spin_when_armed
-        if (_spin_when_armed_ramped < 0) {
-            _spin_when_armed_ramped = 0;
-        }
-        if (_spin_when_armed_ramped > _min_throttle) {
-            _spin_when_armed_ramped = _min_throttle;
-        }
-        motor_out[AP_MOTORS_MOT_1] = _rc_throttle.radio_min + _spin_when_armed_ramped;
-        motor_out[AP_MOTORS_MOT_2] = _rc_throttle.radio_min + _spin_when_armed_ramped;
-        motor_out[AP_MOTORS_MOT_3] = _rc_throttle.radio_min + _spin_when_armed_ramped;
-        motor_out[AP_MOTORS_MOT_4] = _rc_throttle.radio_min + _spin_when_armed_ramped;
+    // check if throttle is below limit
+    if (_rc_throttle.servo_out <= _min_throttle) {
+        limit.throttle_lower = true;
+    }
 
-    }else{
-
-        // check if throttle is below limit
-        if (_rc_throttle.servo_out <= _min_throttle) {
-            limit.throttle_lower = true;
+    if (_flight_mode == AP_MOTORS_VERTICAL) {
+        if (_transition_counter > 0){
+            _transition_counter--;
         }
+    }else if (_flight_mode == AP_MOTORS_HORIZONTAL) {
+        if (_transition_counter < _transition_max){
+            _transition_counter++;
+        }
+    }
+
+    bool cut_vertical_motors = false;
+    if (_transition_counter == _transition_max){
+        cut_vertical_motors = true;
+    }
+
+    // rear
+    motor_out[AP_MOTORS_MOT_3] = (_rc_throttle.radio_out + (_rc_pitch.pwm_out * ((transition_factor * -1) + 1)));
+
+    if (!cut_vertical_motors) {
         //left
-        motor_out[AP_MOTORS_MOT_4] = _rc_throttle.radio_out + _rc_roll.pwm_out;
+        motor_out[AP_MOTORS_MOT_4] = (_rc_throttle.radio_out + _rc_roll.pwm_out) * ((transition_factor * -1) + 1);
         //right
-        motor_out[AP_MOTORS_MOT_2] = _rc_throttle.radio_out - _rc_roll.pwm_out;
-        // rear
-        motor_out[AP_MOTORS_MOT_3] = _rc_throttle.radio_out + _rc_pitch.pwm_out;
+        motor_out[AP_MOTORS_MOT_2] = (_rc_throttle.radio_out - _rc_roll.pwm_out) * ((transition_factor * -1) + 1);
         // front
-        motor_out[AP_MOTORS_MOT_1] = _rc_throttle.radio_out - _rc_pitch.pwm_out;
+        motor_out[AP_MOTORS_MOT_1] = (_rc_throttle.radio_out - _rc_pitch.pwm_out) * ((transition_factor * -1) + 1);
 
         // If motor 1 is at max then lower opposite motor
         if(motor_out[AP_MOTORS_MOT_1] > out_max) {
@@ -164,29 +190,35 @@ void AP_MotorsVtol::output_armed()
             motor_out[AP_MOTORS_MOT_4] -= (motor_out[AP_MOTORS_MOT_2] - out_max);
             motor_out[AP_MOTORS_MOT_2] = out_max;
         }
-        // If motor 3 is at max then lower opposite motor
-        if(motor_out[AP_MOTORS_MOT_3] > out_max) {
-            motor_out[AP_MOTORS_MOT_1] -= (motor_out[AP_MOTORS_MOT_3] - out_max);
-            motor_out[AP_MOTORS_MOT_3] = out_max;
-        }
         // If motor 4 is at max then lower opposite motor
         if(motor_out[AP_MOTORS_MOT_4] > out_max) {
             motor_out[AP_MOTORS_MOT_2] -= (motor_out[AP_MOTORS_MOT_4] - out_max);
             motor_out[AP_MOTORS_MOT_4] = out_max;
         }
-
+        // If motor 3 is at max then lower opposite motor
+        if(motor_out[AP_MOTORS_MOT_3] > out_max) {
+            motor_out[AP_MOTORS_MOT_1] -= (motor_out[AP_MOTORS_MOT_3] - out_max);
+            motor_out[AP_MOTORS_MOT_3] = out_max;
+        }
         // adjust for thrust curve and voltage scaling
         motor_out[AP_MOTORS_MOT_1] = apply_thrust_curve_and_volt_scaling(motor_out[AP_MOTORS_MOT_1], out_min, out_max);
         motor_out[AP_MOTORS_MOT_2] = apply_thrust_curve_and_volt_scaling(motor_out[AP_MOTORS_MOT_2], out_min, out_max);
-        motor_out[AP_MOTORS_MOT_3] = apply_thrust_curve_and_volt_scaling(motor_out[AP_MOTORS_MOT_3], out_min, out_max);
         motor_out[AP_MOTORS_MOT_4] = apply_thrust_curve_and_volt_scaling(motor_out[AP_MOTORS_MOT_4], out_min, out_max);
 
         // ensure motors don't drop below a minimum value and stop
         motor_out[AP_MOTORS_MOT_1] = max(motor_out[AP_MOTORS_MOT_1],    out_min);
         motor_out[AP_MOTORS_MOT_2] = max(motor_out[AP_MOTORS_MOT_2],    out_min);
-        motor_out[AP_MOTORS_MOT_3] = max(motor_out[AP_MOTORS_MOT_3],    out_min);
         motor_out[AP_MOTORS_MOT_4] = max(motor_out[AP_MOTORS_MOT_4],    out_min);
     }
+
+    // adjust for thrust curve and voltage scaling
+    motor_out[AP_MOTORS_MOT_3] = apply_thrust_curve_and_volt_scaling(motor_out[AP_MOTORS_MOT_3], out_min, out_max);
+    motor_out[AP_MOTORS_MOT_3] = max(motor_out[AP_MOTORS_MOT_3],    out_min);
+
+
+    hal.rcout->write(AP_MOTORS_CH_VTOL_HORIZONTAL_ROLL, _rc_roll.radio_trim + (_rc_roll.pwm_out * transition_factor));
+    hal.rcout->write(AP_MOTORS_CH_VTOL_HORIZONTAL_PITCH, _rc_pitch.radio_trim + (_rc_pitch.pwm_out * transition_factor));
+
 
     // send output to each motor
     hal.rcout->write(pgm_read_byte(&_motor_to_channel_map[AP_MOTORS_MOT_1]), motor_out[AP_MOTORS_MOT_1]);

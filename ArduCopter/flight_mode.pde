@@ -20,6 +20,14 @@ static bool set_mode(uint8_t mode)
         return true;
     }
 
+#if FRAME_CONFIG == VTOL_FRAME
+    if (control_mode == VTOL_STABILIZED_HORIZONTAL_FLIGHT){
+        vtolstabilizedhorizontalflight_cleanup();
+    }
+    if (control_mode == VTOL_FREE_HORIZONTAL_FLIGHT){
+        vtolfreehorizontalflight_cleanup();
+    }
+#endif
 
     switch(mode) {
         case ACRO:
@@ -241,17 +249,6 @@ static void exit_mode(uint8_t old_control_mode, uint8_t new_control_mode)
         autotune_stop();
     }
 #endif
-
-#if FRAME_CONFIG == VTOL_FRAME
-    if (old_control_mode == VTOL_STABILIZED_HORIZONTAL_FLIGHT){
-        vtolstabilizedhorizontalflight_cleanup();
-    }
-    if (old_control_mode == VTOL_FREE_HORIZONTAL_FLIGHT){
-        vtolfreehorizontalflight_cleanup();
-    }
-#endif
-
-
 
     // stop mission when we leave auto mode
     if (old_control_mode == AUTO) {

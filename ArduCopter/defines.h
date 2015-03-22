@@ -104,8 +104,8 @@
 #define FLIP        14                  // flip the vehicle on the roll axis
 #define AUTOTUNE    15                  // autotune the vehicle's roll and pitch gains
 #define POSHOLD     16                  // position hold with manual override
-#define FREE_FORWARD_FLIGHT 17
-#define STABILIZED_FORWARD_FLIGHT 18
+#define VTOL_FREE_HORIZONTAL_FLIGHT 17
+#define VTOL_STABILIZED_HORIZONTAL_FLIGHT 18
 #define NUM_MODES   19
 
 

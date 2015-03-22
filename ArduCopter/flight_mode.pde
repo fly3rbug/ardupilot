@@ -20,6 +20,7 @@ static bool set_mode(uint8_t mode)
         return true;
     }
 
+
     switch(mode) {
         case ACRO:
             #if FRAME_CONFIG == HELI_FRAME
@@ -37,17 +38,17 @@ static bool set_mode(uint8_t mode)
             #endif
             break;
 
-        case FREE_FORWARD_FLIGHT:
+        case VTOL_FREE_HORIZONTAL_FLIGHT:
             #if FRAME_CONFIG == VTOL_FRAME
-                success = freeforwardflight_init(ignore_checks);
+                success = vtolfreehorizontalflight_init(ignore_checks);
             #else
                 success = stabilize_init(ignore_checks);
             #endif
             break;
 
-        case STABILIZED_FORWARD_FLIGHT:
+        case VTOL_STABILIZED_HORIZONTAL_FLIGHT:
             #if FRAME_CONFIG == VTOL_FRAME
-                success = stabilizedforwardflight_init(ignore_checks);
+                success = vtolstabilizedhorizontalflight_init(ignore_checks);
             #else
                 success = stabilize_init(ignore_checks);
             #endif
@@ -162,17 +163,17 @@ static void update_flight_mode()
             #endif
             break;
 
-        case FREE_FORWARD_FLIGHT:
+        case VTOL_FREE_HORIZONTAL_FLIGHT:
             #if FRAME_CONFIG == VTOL_FRAME
-                freeforwardflight_run();
+                vtolfreehorizontalflight_run();
             #else
                 stabilize_run();
             #endif
             break;
 
-        case STABILIZED_FORWARD_FLIGHT:
+        case VTOL_STABILIZED_HORIZONTAL_FLIGHT:
             #if FRAME_CONFIG == VTOL_FRAME
-                stabilizedforwardflight_run();
+                vtolstabilizedhorizontalflight_run();
             #else
                 stabilize_run();
             #endif
@@ -240,6 +241,17 @@ static void exit_mode(uint8_t old_control_mode, uint8_t new_control_mode)
         autotune_stop();
     }
 #endif
+
+#if FRAME_CONFIG == VTOL_FRAME
+    if (old_control_mode == VTOL_STABILIZED_HORIZONTAL_FLIGHT){
+        vtolstabilizedhorizontalflight_cleanup();
+    }
+    if (old_control_mode == VTOL_FREE_HORIZONTAL_FLIGHT){
+        vtolfreehorizontalflight_cleanup();
+    }
+#endif
+
+
 
     // stop mission when we leave auto mode
     if (old_control_mode == AUTO) {
@@ -336,11 +348,11 @@ print_flight_mode(AP_HAL::BetterStream *port, uint8_t mode)
     case ACRO:
         port->print_P(PSTR("ACRO"));
         break;
-    case FREE_FORWARD_FLIGHT:
-        port->print_P(PSTR("FREE_FORWARD_FLIGHT"));
+    case VTOL_FREE_HORIZONTAL_FLIGHT:
+        port->print_P(PSTR("VTOL_FREE_HORIZONTAL_FLIGHT"));
         break;
-    case STABILIZED_FORWARD_FLIGHT:
-        port->print_P(PSTR("STABILIZED_FORWARD_FLIGHT"));
+    case VTOL_STABILIZED_HORIZONTAL_FLIGHT:
+        port->print_P(PSTR("VTOL_STABILIZED_HORIZONTAL_FLIGHT"));
         break;
     case ALT_HOLD:
         port->print_P(PSTR("ALT_HOLD"));

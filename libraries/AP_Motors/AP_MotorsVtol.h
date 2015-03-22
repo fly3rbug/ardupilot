@@ -11,8 +11,8 @@
 #include <RC_Channel.h>     // RC Channel Library
 #include "AP_Motors.h"
 
-// tail servo uses channel 7
-#define AP_MOTORS_CH_VTOL_YAW    CH_7
+// tail servo uses channel 9
+#define AP_MOTORS_CH_VTOL_YAW    CH_9
 
 /// @class      AP_MotorsVtol
 class AP_MotorsVtol : public AP_Motors {

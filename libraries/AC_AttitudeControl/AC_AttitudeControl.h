@@ -91,6 +91,10 @@ public:
     // set_yaw_target_to_current_heading - sets yaw target to current heading
     void set_yaw_target_to_current_heading() { _angle_ef_target.z = _ahrs.yaw_sensor; }
 
+    void enable_pitch_rate_control(bool enable) { _enable_pitch_rate_control = enable; }
+    void enable_roll_rate_control(bool enable) { _enable_roll_rate_control = enable; }
+    void enable_yaw_rate_control(bool enable) { _enable_yaw_rate_control = enable; }
+
     //
     // methods to be called by upper controllers to request and implement a desired attitude
     //
@@ -264,6 +268,10 @@ protected:
     Vector3f            _rate_bf_desired;       // body-frame feed forward rates
     int16_t             _angle_boost;           // used only for logging
     int16_t             _acro_angle_switch;           // used only for logging
+
+    bool _enable_pitch_rate_control = true;
+    bool _enable_roll_rate_control = true;
+    bool _enable_yaw_rate_control = true;
 };
 
 #define AC_ATTITUDE_CONTROL_LOG_FORMAT(msg) { msg, sizeof(AC_AttitudeControl::log_Attitude),	\

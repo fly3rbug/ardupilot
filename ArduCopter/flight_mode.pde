@@ -295,6 +295,8 @@ static bool mode_requires_GPS(uint8_t mode) {
 // mode_has_manual_throttle - returns true if the flight mode has a manual throttle (i.e. pilot directly controls throttle)
 static bool mode_has_manual_throttle(uint8_t mode) {
     switch(mode) {
+        case VTOL_STABILIZED_HORIZONTAL_FLIGHT:
+        case VTOL_FREE_HORIZONTAL_FLIGHT:
         case ACRO:
         case STABILIZE:
             return true;

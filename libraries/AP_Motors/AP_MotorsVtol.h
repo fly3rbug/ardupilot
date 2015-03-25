@@ -11,32 +11,59 @@
 #include <RC_Channel.h>     // RC Channel Library
 #include "AP_Motors.h"
 
-#define VTOL_CH_HORIZONTAL_ROLL    CH_5
-#define VTOL_CH_HORIZONTAL_PITCH   CH_6
-#define VTOL_CH_YAW                CH_7
-#define VTOL_CH_TRANSITION         CH_8
+// channels for the control surfaces and transition
+#define VTOL_CH_HORIZONTAL_ROLL         AP_MOTORS_MOT_5
+#define VTOL_CH_HORIZONTAL_PITCH        AP_MOTORS_MOT_6
+#define VTOL_CH_VERTICAL_PITCH_FRONT    AP_MOTORS_MOT_1
+#define VTOL_CH_VERTICAL_ROLL_RIGHT     AP_MOTORS_MOT_2
+#define VTOL_CH_VERTICAL_ROLL_LEFT      AP_MOTORS_MOT_4
+#define VTOL_CH_YAW                     AP_MOTORS_MOT_7
+#define VTOL_CH_THROTTLE                AP_MOTORS_MOT_3
+#define VTOL_CH_TRANSITION              AP_MOTORS_MOT_8
 
-#define VTOL_NUMBERS_OF_SERVOS         4
-#define VTOL_SERVOS_OFFSET             4
+// VTOL modes
+#define VTOL_VERTICAL_MODE              0
+#define VTOL_HORIZONTAL_MODE            1
 
-#define VTOL_VERTICAL                  0
-#define VTOL_HORIZONTAL                1
+// Time that the transition should take
+#define VTOL_TRANSITION_IN_SECONDS      5.0
 
-
-#define VTOL_TRANSITION_IN_SECONDS 5.0
+// Internal declarations
+#define VTOL_NUMBERS_OF_MOTORS          4
+#define VTOL_NUMBERS_OF_SERVOS          4
+#define VTOL_SERVOS_OFFSET              4
 
 /// @class      AP_MotorsVtol
 class AP_MotorsVtol : public AP_Motors {
 public:
 
     /// Constructor
-    AP_MotorsVtol(RC_Channel& rc_roll, RC_Channel& rc_pitch, RC_Channel& rc_throttle, RC_Channel& rc_yaw, RC_Channel& rc_tail, RC_Channel& rc_horizontal_roll, RC_Channel& rc_horizontal_pitch, RC_Channel& rc_transition, uint16_t loop_rate, uint16_t speed_hz = AP_MOTORS_SPEED_DEFAULT) :
-        AP_Motors(rc_roll, rc_pitch, rc_throttle, rc_yaw, loop_rate, speed_hz),
-        _rc_tail(rc_tail), _rc_horizontal_roll(rc_horizontal_roll), _rc_horizontal_pitch(rc_horizontal_pitch), _rc_transition(rc_transition)
+    AP_MotorsVtol(
+            RC_Channel& rc_roll,
+            RC_Channel& rc_pitch,
+            RC_Channel& rc_throttle,
+            RC_Channel& rc_yaw,
+            RC_Channel& rc_tail,
+            RC_Channel& rc_horizontal_roll,
+            RC_Channel& rc_horizontal_pitch,
+            RC_Channel& rc_transition,
+            uint16_t loop_rate,
+            uint16_t speed_hz = AP_MOTORS_SPEED_DEFAULT) :
+        AP_Motors(
+                rc_roll,
+                rc_pitch,
+                rc_throttle,
+                rc_yaw,
+                loop_rate,
+                speed_hz),
+                _rc_tail(rc_tail),
+                _rc_horizontal_roll(rc_horizontal_roll),
+                _rc_horizontal_pitch(rc_horizontal_pitch),
+                _rc_transition(rc_transition)
     {
         _transition_counter = 0;
         _transition_max = VTOL_TRANSITION_IN_SECONDS * loop_rate;
-        _flight_mode = VTOL_VERTICAL;
+        _flight_mode = VTOL_VERTICAL_MODE;
     };
 
     // init
@@ -60,7 +87,7 @@ public:
     //  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
     virtual uint16_t    get_motor_mask();
 
-    virtual void        set_flight_mode(uint8_t mode);
+    void        set_vtol_mode(uint8_t mode);
 
 protected:
     // output - sends commands to the motors
@@ -70,17 +97,18 @@ protected:
     virtual void        output_vertical_min();
     virtual void        output_horizontal_min();
 
-    virtual void        calc_yaw_and_transition(int16_t servo_out[], float transition_factor);
-    virtual void        calc_horizontal_roll_pitch(int16_t servo_out[], float transition_factor);
+    virtual void        calc_yaw_and_transition(int16_t motor_out[], float transition_factor);
+    virtual void        calc_horizontal_roll_pitch(int16_t motor_out[], float transition_factor);
 
     virtual void        calc_vertical_roll_pitch(int16_t motor_out[], float transition_factor);
     virtual void        calc_throttle(int16_t motor_out[]);
 
     virtual void        output_motors(int16_t motor_out[]);
-    virtual void        output_servos(int16_t servo_out[]);
 
     virtual void        set_throttle_limits();
     virtual float       calc_transition_factor();
+
+    virtual bool        is_transition_to_horizontal_mode_done();
 
     uint16_t            _transition_counter;
     uint16_t            _transition_max;

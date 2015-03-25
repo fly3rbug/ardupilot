@@ -4,10 +4,10 @@
  * control_vtolfreehorizontalflight.pde - init and run calls for new flight mode
  */
 
-// vtolfreehorizontalflight_init - initialise flight mode
+// vtolfreehorizontalflight_init - Initialize flight mode
 static bool vtolfreehorizontalflight_init(bool ignore_checks)
 {
-    motors.set_flight_mode(VTOL_HORIZONTAL);
+    motors.set_vtol_mode(VTOL_HORIZONTAL_MODE);
 
     attitude_control.enable_pitch_rate_control(false);
     attitude_control.enable_roll_rate_control(false);
@@ -17,7 +17,7 @@ static bool vtolfreehorizontalflight_init(bool ignore_checks)
 
 static void vtolfreehorizontalflight_cleanup()
 {
-    motors.set_flight_mode(VTOL_VERTICAL);
+    motors.set_vtol_mode(VTOL_VERTICAL_MODE);
 
     attitude_control.enable_pitch_rate_control(true);
     attitude_control.enable_roll_rate_control(true);

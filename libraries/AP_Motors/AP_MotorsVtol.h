@@ -25,13 +25,12 @@
 #define VTOL_VERTICAL_MODE              0
 #define VTOL_HORIZONTAL_MODE            1
 
-// Time that the transition should take
-#define VTOL_TRANSITION_IN_SECONDS      5.0
-
 // Internal declarations
 #define VTOL_NUMBERS_OF_MOTORS          4
 #define VTOL_NUMBERS_OF_SERVOS          4
 #define VTOL_SERVOS_OFFSET              4
+
+#define VTOL_TRANSITION_TIME_DEFAULT    5.0f
 
 /// @class      AP_MotorsVtol
 class AP_MotorsVtol : public AP_Motors {
@@ -61,8 +60,9 @@ public:
                 _rc_horizontal_pitch(rc_horizontal_pitch),
                 _rc_transition(rc_transition)
     {
+        AP_Param::setup_object_defaults(this, var_info);
+        //_vtol_transition_time = vtol_transition_time;
         _transition_counter = 0;
-        _transition_max = VTOL_TRANSITION_IN_SECONDS * loop_rate;
         _flight_mode = VTOL_VERTICAL_MODE;
     };
 
@@ -87,7 +87,10 @@ public:
     //  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
     virtual uint16_t    get_motor_mask();
 
-    void        set_vtol_mode(uint8_t mode);
+    void                set_vtol_mode(uint8_t mode);
+
+    // var_info for holding Parameter information
+    static const struct AP_Param::GroupInfo var_info[];
 
 protected:
     // output - sends commands to the motors
@@ -110,9 +113,8 @@ protected:
 
     virtual bool        is_transition_to_horizontal_mode_done();
 
+    AP_Float            _vtol_transition_time;  // vtol transition time in seconds
     uint16_t            _transition_counter;
-    uint16_t            _transition_max;
-
     uint8_t             _flight_mode;
 
     RC_Channel&         _rc_tail;       // REV parameter used from this channel to determine direction of tail servo movement

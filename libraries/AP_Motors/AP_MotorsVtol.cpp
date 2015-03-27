@@ -25,6 +25,20 @@
 
 extern const AP_HAL::HAL& hal;
 
+const AP_Param::GroupInfo AP_MotorsVtol::var_info[] PROGMEM = {
+    // 0 was used by TB_RATIO
+    // 1,2,3 were used by throttle curve
+
+    // @Param: TRANS_TIME
+    // @DisplayName: VTOL transition time
+    // @Description: VTOL transition time in seconds
+    // @Units: Seconds
+    // @User: Advanced
+    AP_GROUPINFO("TRANS_TIME", 5, AP_MotorsVtol, _vtol_transition_time, VTOL_TRANSITION_TIME_DEFAULT),
+
+    AP_GROUPEND
+};
+
 // init
 void AP_MotorsVtol::Init()
 {
@@ -148,7 +162,7 @@ void AP_MotorsVtol::set_throttle_limits()
 
 bool AP_MotorsVtol::is_transition_to_horizontal_mode_done()
 {
-    return (_transition_counter == _transition_max);
+    return (_transition_counter == (_vtol_transition_time * _loop_rate));
 }
 
 float AP_MotorsVtol::calc_transition_factor()
@@ -162,13 +176,13 @@ float AP_MotorsVtol::calc_transition_factor()
     }
     else if (_flight_mode == VTOL_HORIZONTAL_MODE)
     {
-        if (_transition_counter < _transition_max)
+        if (_transition_counter < (_vtol_transition_time * _loop_rate))
         {
             _transition_counter++;
         }
     }
 
-    return (float)_transition_counter / _transition_max;
+    return (float)_transition_counter / (_vtol_transition_time * _loop_rate);
 }
 
 void AP_MotorsVtol::calc_throttle(int16_t motor_out[])

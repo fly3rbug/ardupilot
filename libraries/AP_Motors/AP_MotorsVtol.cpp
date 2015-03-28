@@ -159,7 +159,6 @@ void AP_MotorsVtol::set_vtol_mode(uint8_t mode)
     _flight_mode = mode;
 }
 
-
 void AP_MotorsVtol::set_throttle_limits()
 {
     // initialize lower limit flag

@@ -89,6 +89,8 @@ public:
     //  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
     virtual uint16_t    get_motor_mask();
 
+    virtual float       get_transition_progress();
+
     void                set_vtol_mode(uint8_t mode);
 
     // var_info for holding Parameter information
@@ -111,7 +113,7 @@ protected:
     virtual void        output_motors(int16_t motor_out[]);
 
     virtual void        set_throttle_limits();
-    virtual float       get_transition_progress();
+
     virtual float       calc_transition_curve_values(float x);
 
     virtual bool        is_transition_to_horizontal_mode_done();

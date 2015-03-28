@@ -30,7 +30,9 @@
 #define VTOL_NUMBERS_OF_SERVOS          4
 #define VTOL_SERVOS_OFFSET              4
 
-#define VTOL_TRANSITION_TIME_DEFAULT    5.0f
+#define VTOL_TRANSITION_TIME_DEFAULT            5.0f
+#define VTOL_TRANSITION_CURVE_LENGTH_DEFAULT    0.75f
+#define VTOL_TRANSITION_CURVE_EXPONENT_DEFAULT  4.0f
 
 /// @class      AP_MotorsVtol
 class AP_MotorsVtol : public AP_Motors {
@@ -109,11 +111,14 @@ protected:
     virtual void        output_motors(int16_t motor_out[]);
 
     virtual void        set_throttle_limits();
-    virtual float       calc_transition_factor();
+    virtual float       get_transition_progress();
+    virtual float       calc_transition_curve_values(float x);
 
     virtual bool        is_transition_to_horizontal_mode_done();
 
     AP_Float            _vtol_transition_time;  // vtol transition time in seconds
+    AP_Float            _vtol_transition_curve_length;  // vtol transition curve length in 0 to 1 representing 0 to 100%
+    AP_Float            _vtol_transition_curve_exponent;  // vtol transition exponent for the curve calculation
     uint16_t            _transition_counter;
     uint8_t             _flight_mode;
 

@@ -925,6 +925,10 @@ const AP_Param::Info var_info[] PROGMEM = {
     // @Path: ../libraries/AP_Motors/AP_MotorsCoax.cpp
     GOBJECT(motors, "MOT_",           AP_MotorsCoax),
 
+#elif FRAME_CONFIG == VTOL_FRAME
+    // @Group: VTOL_
+    // @Path: ../libraries/AP_Motors/AP_MotorsVtol.cpp
+    GOBJECT(motors, "VTOL_",         AP_MotorsVtol),
 #else
     // @Group: MOT_
     // @Path: ../libraries/AP_Motors/AP_Motors_Class.cpp

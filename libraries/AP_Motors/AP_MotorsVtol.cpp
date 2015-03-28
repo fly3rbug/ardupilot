@@ -22,6 +22,7 @@
 #include <AP_HAL.h>
 #include <AP_Math.h>
 #include "AP_MotorsVtol.h"
+#include <math.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -32,9 +33,29 @@ const AP_Param::GroupInfo AP_MotorsVtol::var_info[] PROGMEM = {
     // @Param: TRANS_TIME
     // @DisplayName: VTOL transition time
     // @Description: VTOL transition time in seconds
+    // @Range: 0.0 30.0
+    // @Increment: 0.1
     // @Units: Seconds
     // @User: Advanced
     AP_GROUPINFO("TRANS_TIME", 5, AP_MotorsVtol, _vtol_transition_time, VTOL_TRANSITION_TIME_DEFAULT),
+
+    // @Param: TR_CRV_LEN
+    // @DisplayName: VTOL transition curve length
+    // @Description: Sets the length of the transition curve. Value between 0 and 1 represends 0 to 100% of the transition time.
+    // @Range: 0.0 1.0
+    // @Increment: 0.01
+    // @Units: percentage
+    // @User: Advanced
+    AP_GROUPINFO("TR_CRV_LEN", 6, AP_MotorsVtol, _vtol_transition_curve_length, VTOL_TRANSITION_CURVE_LENGTH_DEFAULT),
+
+    // @Param: TR_CRV_EXP
+    // @DisplayName: VTOL transition curve exponent
+    // @Description: VTOL transition curve exponent used for calculating the curve.
+    // @Range: 0.0 1.0
+    // @Increment: 0.01
+    // @Units: Exponent
+    // @User: Advanced
+    AP_GROUPINFO("TR_CRV_EXP", 7, AP_MotorsVtol, _vtol_transition_curve_exponent, VTOL_TRANSITION_CURVE_EXPONENT_DEFAULT),
 
     AP_GROUPEND
 };
@@ -165,7 +186,7 @@ bool AP_MotorsVtol::is_transition_to_horizontal_mode_done()
     return (_transition_counter == (_vtol_transition_time * _loop_rate));
 }
 
-float AP_MotorsVtol::calc_transition_factor()
+float AP_MotorsVtol::get_transition_progress()
 {
     if (_flight_mode == VTOL_VERTICAL_MODE)
     {
@@ -185,6 +206,16 @@ float AP_MotorsVtol::calc_transition_factor()
     return (float)_transition_counter / (_vtol_transition_time * _loop_rate);
 }
 
+float AP_MotorsVtol::calc_transition_curve_values(float x)
+{
+    float value = 1 - pow( fabs(x) / _vtol_transition_curve_length, _vtol_transition_curve_exponent);
+
+    value = max(value, 0.0f);
+    value = min(value, 1.0f);
+
+    return value;
+}
+
 void AP_MotorsVtol::calc_throttle(int16_t motor_out[])
 {
     motor_out[VTOL_CH_THROTTLE] += _rc_throttle.radio_out;
@@ -192,16 +223,16 @@ void AP_MotorsVtol::calc_throttle(int16_t motor_out[])
 
 void AP_MotorsVtol::calc_vertical_roll_pitch(int16_t motor_out[], float transition_factor)
 {
-    transition_factor = (transition_factor * -1) + 1;
+    float transition_curve = calc_transition_curve_values(transition_factor);
 
-    motor_out[VTOL_CH_THROTTLE] += _rc_pitch.pwm_out * transition_factor;
+    motor_out[VTOL_CH_THROTTLE] += _rc_pitch.pwm_out * transition_curve;
 
     if (!is_transition_to_horizontal_mode_done())
     {
         // calc motor output
-        motor_out[VTOL_CH_VERTICAL_ROLL_LEFT] = (_rc_throttle.radio_out + _rc_roll.pwm_out) * transition_factor;
-        motor_out[VTOL_CH_VERTICAL_ROLL_RIGHT] = (_rc_throttle.radio_out - _rc_roll.pwm_out) * transition_factor;
-        motor_out[VTOL_CH_VERTICAL_PITCH_FRONT] = (_rc_throttle.radio_out - _rc_pitch.pwm_out) * transition_factor;
+        motor_out[VTOL_CH_VERTICAL_ROLL_LEFT] = (_rc_throttle.radio_out + _rc_roll.pwm_out) * transition_curve;
+        motor_out[VTOL_CH_VERTICAL_ROLL_RIGHT] = (_rc_throttle.radio_out - _rc_roll.pwm_out) * transition_curve;
+        motor_out[VTOL_CH_VERTICAL_PITCH_FRONT] = (_rc_throttle.radio_out - _rc_pitch.pwm_out) * transition_curve;
 
         // If motor 1 is at max then lower opposite motor
         if(motor_out[VTOL_CH_VERTICAL_PITCH_FRONT] > _rc_throttle.radio_max)
@@ -235,8 +266,10 @@ void AP_MotorsVtol::calc_vertical_roll_pitch(int16_t motor_out[], float transiti
 
 void AP_MotorsVtol::calc_horizontal_roll_pitch(int16_t motor_out[], float transition_factor)
 {
-    motor_out[VTOL_CH_HORIZONTAL_ROLL] = _rc_roll.radio_trim + (_rc_roll.pwm_out * transition_factor);
-    motor_out[VTOL_CH_HORIZONTAL_PITCH] = _rc_pitch.radio_trim + (_rc_pitch.pwm_out * transition_factor);
+    float transition_curve = calc_transition_curve_values((transition_factor * -1) + 1);
+
+    motor_out[VTOL_CH_HORIZONTAL_ROLL] = _rc_roll.radio_trim + (_rc_roll.pwm_out * transition_curve);
+    motor_out[VTOL_CH_HORIZONTAL_PITCH] = _rc_pitch.radio_trim + (_rc_pitch.pwm_out * transition_curve);
 }
 
 void AP_MotorsVtol::calc_yaw_and_transition(int16_t motor_out[], float transition_factor)
@@ -283,7 +316,7 @@ void AP_MotorsVtol::output_motors(int16_t motor_out[])
 void AP_MotorsVtol::output_armed()
 {
     int16_t motor_out[VTOL_NUMBERS_OF_MOTORS + VTOL_NUMBERS_OF_SERVOS];
-    float transition_factor = calc_transition_factor();
+    float transition_factor = get_transition_progress();
 
     for (uint8_t i = 0; i < VTOL_NUMBERS_OF_MOTORS + VTOL_NUMBERS_OF_SERVOS; i++)
     {
@@ -309,7 +342,7 @@ void AP_MotorsVtol::output_armed()
 // output_disarmed - sends commands to the motors
 void AP_MotorsVtol::output_disarmed()
 {
-    float transition_factor = calc_transition_factor();
+    float transition_factor = get_transition_progress();
 
     int16_t motor_out[VTOL_NUMBERS_OF_MOTORS + VTOL_NUMBERS_OF_SERVOS];
     for (uint8_t i = 0; i < VTOL_NUMBERS_OF_MOTORS + VTOL_NUMBERS_OF_SERVOS; i++)

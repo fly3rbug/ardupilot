@@ -159,6 +159,11 @@ void AP_MotorsVtol::set_vtol_mode(uint8_t mode)
     _flight_mode = mode;
 }
 
+uint8_t AP_MotorsVtol::get_vtol_mode()
+{
+    return _flight_mode;
+}
+
 void AP_MotorsVtol::set_throttle_limits()
 {
     // initialize lower limit flag
@@ -183,6 +188,16 @@ void AP_MotorsVtol::set_throttle_limits()
 bool AP_MotorsVtol::is_transition_to_horizontal_mode_done()
 {
     return (_transition_counter == (_vtol_transition_time * _loop_rate));
+}
+
+bool AP_MotorsVtol::is_transition_to_vertical_mode_done()
+{
+    return _transition_counter == 0;
+}
+
+bool AP_MotorsVtol::is_transitioning()
+{
+    return (_transition_counter == 0 || is_transition_to_horizontal_mode_done());
 }
 
 float AP_MotorsVtol::get_transition_progress()

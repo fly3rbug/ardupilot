@@ -91,7 +91,12 @@ public:
 
     virtual float       get_transition_progress();
 
+    virtual bool        is_transition_to_horizontal_mode_done();
+    virtual bool        is_transition_to_vertical_mode_done();
+    virtual bool        is_transitioning();
+
     void                set_vtol_mode(uint8_t mode);
+    uint8_t             get_vtol_mode();
 
     // var_info for holding Parameter information
     static const struct AP_Param::GroupInfo var_info[];
@@ -115,8 +120,6 @@ protected:
     virtual void        set_throttle_limits();
 
     virtual float       calc_transition_curve_values(float x);
-
-    virtual bool        is_transition_to_horizontal_mode_done();
 
     AP_Float            _vtol_transition_time;  // vtol transition time in seconds
     AP_Float            _vtol_transition_curve_length;  // vtol transition curve length in 0 to 1 representing 0 to 100%

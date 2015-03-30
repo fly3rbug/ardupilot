@@ -21,11 +21,19 @@ static bool set_mode(uint8_t mode)
     }
 
 #if FRAME_CONFIG == VTOL_FRAME
-    if (control_mode == VTOL_STABILIZED_HORIZONTAL_FLIGHT){
-        vtolstabilizedhorizontalflight_cleanup();
-    }
-    if (control_mode == VTOL_FREE_HORIZONTAL_FLIGHT){
-        vtolfreehorizontalflight_cleanup();
+    if (control_mode == VTOL_STABILIZED_HORIZONTAL_FLIGHT || control_mode == VTOL_FREE_HORIZONTAL_FLIGHT){
+        if (motors.is_transition_to_vertical_mode_done() || mode == VTOL_STABILIZED_HORIZONTAL_FLIGHT || mode == VTOL_FREE_HORIZONTAL_FLIGHT){
+            if (control_mode == VTOL_STABILIZED_HORIZONTAL_FLIGHT){
+                vtolstabilizedhorizontalflight_cleanup();
+            }else if (control_mode == VTOL_FREE_HORIZONTAL_FLIGHT){
+                vtolfreehorizontalflight_cleanup();
+            }
+        }
+        else
+        {
+            motors.set_vtol_mode(VTOL_VERTICAL_MODE);
+            return true;
+        }
     }
 #endif
 

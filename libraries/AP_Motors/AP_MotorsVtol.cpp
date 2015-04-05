@@ -187,7 +187,7 @@ void AP_MotorsVtol::set_throttle_limits()
 
 bool AP_MotorsVtol::is_transition_to_horizontal_mode_done()
 {
-    return (_transition_counter == (_vtol_transition_time * _loop_rate));
+    return (_transition_counter == (_vtol_transition_time * _loop_rate * 2));
 }
 
 bool AP_MotorsVtol::is_transition_to_vertical_mode_done()
@@ -211,16 +211,16 @@ float AP_MotorsVtol::get_transition_progress()
     }
     else if (_flight_mode == VTOL_HORIZONTAL_MODE)
     {
-        if (_transition_counter < (_vtol_transition_time * _loop_rate))
+        if (_transition_counter < (_vtol_transition_time * _loop_rate * 2))
         {
             _transition_counter++;
         }
     }
 
-    return (float)_transition_counter / (_vtol_transition_time * _loop_rate);
+    return (float)_transition_counter / (_vtol_transition_time * _loop_rate * 2);
 }
 
-float AP_MotorsVtol::calc_transition_curve_values(float x)
+float AP_MotorsVtol::calc_transition_control_curve_values(float x)
 {
     float value = 1 - pow( fabs(x) / _vtol_transition_curve_length, _vtol_transition_curve_exponent);
 
@@ -237,7 +237,7 @@ void AP_MotorsVtol::calc_throttle(int16_t motor_out[])
 
 void AP_MotorsVtol::calc_vertical_roll_pitch(int16_t motor_out[], float transition_factor)
 {
-    float transition_curve = calc_transition_curve_values(transition_factor);
+    float transition_curve = calc_transition_control_curve_values(transition_factor);
 
     motor_out[VTOL_CH_THROTTLE] += _rc_pitch.pwm_out * transition_curve;
 
@@ -280,7 +280,7 @@ void AP_MotorsVtol::calc_vertical_roll_pitch(int16_t motor_out[], float transiti
 
 void AP_MotorsVtol::calc_horizontal_roll_pitch(int16_t motor_out[], float transition_factor)
 {
-    float transition_curve = calc_transition_curve_values((transition_factor * -1) + 1);
+    float transition_curve = calc_transition_control_curve_values((transition_factor * -1) + 1);
 
     motor_out[VTOL_CH_HORIZONTAL_ROLL] = _rc_roll.radio_trim + (_rc_roll.pwm_out * transition_curve);
     motor_out[VTOL_CH_HORIZONTAL_PITCH] = _rc_pitch.radio_trim + (_rc_pitch.pwm_out * transition_curve);
@@ -289,7 +289,7 @@ void AP_MotorsVtol::calc_horizontal_roll_pitch(int16_t motor_out[], float transi
 void AP_MotorsVtol::calc_yaw_and_transition(int16_t motor_out[], float transition_factor)
 {
     motor_out[VTOL_CH_YAW] = _rc_yaw.radio_out;
-    motor_out[VTOL_CH_TRANSITION] = _rc_transition.radio_min + ((_rc_transition.radio_max - _rc_transition.radio_min) * transition_factor);
+    motor_out[VTOL_CH_TRANSITION] = _rc_transition.radio_max - ((_rc_transition.radio_max - _rc_transition.radio_min) * transition_factor);
 }
 
 void AP_MotorsVtol::output_motors(int16_t motor_out[])

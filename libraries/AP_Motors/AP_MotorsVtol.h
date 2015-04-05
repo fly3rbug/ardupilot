@@ -119,7 +119,7 @@ protected:
 
     virtual void        set_throttle_limits();
 
-    virtual float       calc_transition_curve_values(float x);
+    virtual float       calc_transition_control_curve_values(float x);
 
     AP_Float            _vtol_transition_time;  // vtol transition time in seconds
     AP_Float            _vtol_transition_curve_length;  // vtol transition curve length in 0 to 1 representing 0 to 100%

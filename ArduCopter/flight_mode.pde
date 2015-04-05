@@ -20,23 +20,6 @@ static bool set_mode(uint8_t mode)
         return true;
     }
 
-#if FRAME_CONFIG == VTOL_FRAME
-    if (control_mode == VTOL_STABILIZED_HORIZONTAL_FLIGHT || control_mode == VTOL_FREE_HORIZONTAL_FLIGHT){
-        if (motors.is_transition_to_vertical_mode_done() || mode == VTOL_STABILIZED_HORIZONTAL_FLIGHT || mode == VTOL_FREE_HORIZONTAL_FLIGHT){
-            if (control_mode == VTOL_STABILIZED_HORIZONTAL_FLIGHT){
-                vtolstabilizedhorizontalflight_cleanup();
-            }else if (control_mode == VTOL_FREE_HORIZONTAL_FLIGHT){
-                vtolfreehorizontalflight_cleanup();
-            }
-        }
-        else
-        {
-            motors.set_vtol_mode(VTOL_VERTICAL_MODE);
-            return true;
-        }
-    }
-#endif
-
     switch(mode) {
         case ACRO:
             #if FRAME_CONFIG == HELI_FRAME
@@ -49,22 +32,24 @@ static bool set_mode(uint8_t mode)
         case STABILIZE:
             #if FRAME_CONFIG == HELI_FRAME
                 success = heli_stabilize_init(ignore_checks);
+            #elif FRAME_CONFIG == VTOL_FRAME
+                success = vtol_init(ignore_checks, mode);
             #else
                 success = stabilize_init(ignore_checks);
             #endif
             break;
 
-        case VTOL_FREE_HORIZONTAL_FLIGHT:
+        case VTOL_FREE_FWD_FLIGHT:
             #if FRAME_CONFIG == VTOL_FRAME
-                success = vtolfreehorizontalflight_init(ignore_checks);
+                success = vtol_init(ignore_checks, mode);
             #else
                 success = stabilize_init(ignore_checks);
             #endif
             break;
 
-        case VTOL_STABILIZED_HORIZONTAL_FLIGHT:
+        case VTOL_ACRO_FWD_FLIGHT:
             #if FRAME_CONFIG == VTOL_FRAME
-                success = vtolstabilizedhorizontalflight_init(ignore_checks);
+                success = vtol_init(ignore_checks, mode);
             #else
                 success = stabilize_init(ignore_checks);
             #endif
@@ -174,22 +159,24 @@ static void update_flight_mode()
         case STABILIZE:
             #if FRAME_CONFIG == HELI_FRAME
                 heli_stabilize_run();
+            #elif FRAME_CONFIG == VTOL_FRAME
+                vtol_stabilize_hover_run();
             #else
                 stabilize_run();
             #endif
             break;
 
-        case VTOL_FREE_HORIZONTAL_FLIGHT:
+        case VTOL_FREE_FWD_FLIGHT:
             #if FRAME_CONFIG == VTOL_FRAME
-                vtolfreehorizontalflight_run();
+                vtol_free_fwd_run();
             #else
                 stabilize_run();
             #endif
             break;
 
-        case VTOL_STABILIZED_HORIZONTAL_FLIGHT:
+        case VTOL_ACRO_FWD_FLIGHT:
             #if FRAME_CONFIG == VTOL_FRAME
-                vtolstabilizedhorizontalflight_run();
+                vtol_acro_fwd_run();
             #else
                 stabilize_run();
             #endif
@@ -303,8 +290,8 @@ static bool mode_requires_GPS(uint8_t mode) {
 // mode_has_manual_throttle - returns true if the flight mode has a manual throttle (i.e. pilot directly controls throttle)
 static bool mode_has_manual_throttle(uint8_t mode) {
     switch(mode) {
-        case VTOL_STABILIZED_HORIZONTAL_FLIGHT:
-        case VTOL_FREE_HORIZONTAL_FLIGHT:
+        case VTOL_ACRO_FWD_FLIGHT:
+        case VTOL_FREE_FWD_FLIGHT:
         case ACRO:
         case STABILIZE:
             return true;
@@ -355,11 +342,11 @@ print_flight_mode(AP_HAL::BetterStream *port, uint8_t mode)
     case ACRO:
         port->print_P(PSTR("ACRO"));
         break;
-    case VTOL_FREE_HORIZONTAL_FLIGHT:
-        port->print_P(PSTR("VTOL_FREE_HORIZONTAL_FLIGHT"));
+    case VTOL_FREE_FWD_FLIGHT:
+        port->print_P(PSTR("VTOL_FREE_FWD_FLIGHT"));
         break;
-    case VTOL_STABILIZED_HORIZONTAL_FLIGHT:
-        port->print_P(PSTR("VTOL_STABILIZED_HORIZONTAL_FLIGHT"));
+    case VTOL_ACRO_FWD_FLIGHT:
+        port->print_P(PSTR("VTOL_ACRO_FWD_FLIGHT"));
         break;
     case ALT_HOLD:
         port->print_P(PSTR("ALT_HOLD"));
